@@ -1,16 +1,32 @@
 import React, { Component } from 'react';
+import axios from 'axios';
 import './App.css';
+
+import loader from './img.gif';
+
+
 
 class App extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      buyItems: ['milk', 'bread', 'fruits'],
-      message: ''
-
+      buyItems: [],
+      message: '',
+      isLoading: false
     }
+  }
 
+  componentDidMount() {
+    return axios.get('https://us-central1-restapo-c62d5.cloudfunctions.net/getAllItems').then((response) => {
+      this.setState({
+        isLoading: true,
+        buyItems: response.data
+      })
+      this.setState({
+        isLoading: false
+      })
+    })
   }
 
   addItem(event) {
@@ -25,13 +41,20 @@ class App extends Component {
         message: 'This item is already on the list'
       })
 
-    }else {
-      newItem !== '' & this.setState({
-        buyItems: [...this.state.buyItems, newItem],
-        message: ''
+    } else {
+      return newItem !== '' && axios.post(`https://us-central1-restapo-c62d5.cloudfunctions.net/helloWorld?items=${newItem}`).then((response) => {
+        this.setState({
+          isLoading: true,
+          buyItems: response.data,
+          message: ''
+        })
+        this.setState({
+          isLoading: false
+        })
+        this.addForm.reset()
       })
     }
-    this.addForm.reset()
+
   }
 
   removeItem(item){
@@ -39,8 +62,14 @@ class App extends Component {
       return item !== buyItems
     })
 
-    this.setState({
-      buyItems: [...newBuyItems]
+    return axios.delete(`https://us-central1-restapo-c62d5.cloudfunctions.net/delete?id=${item.id}`).then((response) => {
+      this.setState({
+        isLoading: true,
+        buyItems: response.data
+      })
+      this.setState({
+        isLoading: false
+      })
     })
 
     if(newBuyItems.length === 0){
@@ -57,9 +86,58 @@ class App extends Component {
     })
   }
 
+  renderItems() {
+    let id = 1;
+    const { buyItems, message } = this.state;
+    
+    if(this.state.isLoading) {
+      return <img src={(loader)}/>
+    }
+    return (
+      buyItems.length > 0 &&
+      <table className="table">
+        <caption>Shopping List</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Item</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            buyItems.map(item => {
+              return (
+                <tr key={item.id}>
+                  <th scope="row">{id++}</th>
+                  <td>{item.items}</td>
+                  <td>
+                    <button onClick={(e) => this.removeItem(item)}  type="button" className="btn btn-default btn-sm">
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              )
+            })
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan="2">&nbsp;</td>
+            <td>
+              <button onClick={(e) => this.clearAll()}
+              className="btn btn-default btn-sm">Clear List</button>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    )
+  }
+
+
 
   render() {
-    const { buyItems, message } = this.state
+    const { buyItems, message } = this.state;
     return (
       <div className="container">
         <h1>Shopping List</h1>
@@ -76,67 +154,13 @@ class App extends Component {
           {
             (message !== '' || buyItems.length === 0) && <p className="message text-danger">{message}</p>
           }
-        {
-          buyItems.length > 0 &&
-        <table className="table">
-          <caption>Shopping List</caption>
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Item</th>
-              <th scope="col">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              buyItems.map(item => {
-                return (
-                  <tr key={item}>
-                    <th scope="row">1</th>
-                    <td>{item}</td>
-                    <td>
-                      <button onClick={(e) => this.removeItem(item)}  type="button" className="btn btn-default btn-sm">
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan="2">&nbsp;</td>
-              <td>
-                <button onClick={(e) => this.clearAll()}
-                className="btn btn-default btn-sm">Clear List</button>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
 
-        }
-
+         {this.renderItems()}
 
         </div>
       </div>
     );
   }
 }
-
-// const Headlines = () => {
-//   return <h1 classNameName="title">Welcome to React world</h1>
-// }
-
-// const Greetings = (props) => {
-//   const { name, age } = props
-//   return <p>You will love it {name} ({age})</p>
-// }
-
-
-// Greetings.prototype = {
-//   name: React.PropTypes.string,
-//   age: React.PropTypes.number
-// }
 
 export default App;
